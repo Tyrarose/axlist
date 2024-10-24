@@ -1,0 +1,220 @@
+body {
+    background-color: #0e0f12; /* Dark background for trading vibe */
+    color: #e0e0e0; /* Light text color */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(218deg, #080d10, #1c1c24);
+    background-size: 400% 400%;
+    animation: AnimationName 55s ease infinite;
+    font-family: 'Roboto', sans-serif; /* Use a modern font */
+  }
+  
+  @keyframes AnimationName {
+    0% { background-position: 91% 0% }
+    50% { background-position: 10% 100% }
+    100% { background-position: 91% 0% }
+  }
+  
+  .container {
+    margin: 20px auto !important;
+    border: 1px solid #44AA91;
+    border-radius: 15px;
+    padding: 30px !important;
+    background-color: #1b1e23; /* Darker container background */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
+    max-width: 650px !important;
+    width: 100% !important;
+  }
+  
+  h1 {
+    margin-bottom: 25px !important;
+    color: #E2F1E7 !important; /* Crypto green color */
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+  }
+  
+  input.form-control {
+    border-radius: 30px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    background-color: #2a2a2a;
+    border: 2px solid #44AA91;
+    color: #e0e0e0;
+  }
+  
+  input.form-control::placeholder {
+    color: #aaa; /* Lighter placeholder text */
+  }
+  
+  .btn-primary, .btn-secondary, .btn-add {
+    border-radius: 30px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    transition: background-color 0.3s, transform 0.3s ease;
+  }
+  
+  .btn-add {
+    background-color: #44AA91 !important;
+    color: white !important;
+  }
+  
+  .btn-add:hover {
+    background-color: #267387;
+    transform: scale(1.05); /* Slight zoom effect */
+  }
+  
+  .btn-danger {
+    background-color: #629584 !important;
+    border: 1px #629584 solid !important;
+    color: white;
+    transition: background-color 0.3s ease;
+  }
+  
+  .btn-danger:hover {
+    background-color: #cc0000;
+  }
+
+
+
+  /* ////////////////////// */
+
+.pinned-separator{
+  border: 1px #E2F1E7 solid;
+  margin-bottom: 20px;
+  
+}
+
+
+.pinned-btn {
+  background-color: transparent !important;
+  border: none !important; /* Remove border */
+  outline: none !important; /* Remove outline */
+  padding-right: 12px !important; /* Remove padding */
+}
+
+.pin-icon {
+  color: #A02334 !important; /* Red color for pinned state */
+}
+
+.unpin-icon {
+  color: gray !important; /* Gray color for unpinned state */
+}
+
+.pinned-btn:hover .pin-icon,
+.pinned-btn:hover .unpin-icon {
+  opacity: 0.7 !important; /* Optional: hover effect */
+}
+
+
+  .input-group .form-control {
+    height: auto;
+    padding: 12px 20px; /* Ensure consistent padding */
+    font-size: 1rem;
+    background-color: #2a2a2a;
+    border: 2px solid #44AA91;
+    color: #e0e0e0;
+    border-radius: 30px 0 0 30px; /* Rounded corners for the input */
+  }
+  
+  .input-group .btn-add {
+    height: auto;
+    padding: 12px 20px;
+    font-size: 1rem;
+    border-radius: 0 30px 30px 0; /* Rounded corners for the button */
+    background-color: #44AA91;
+    color: white;
+    border: 2px solid #44AA91;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .input-group .btn-add:hover {
+    background-color: #267387;
+    transform: scale(1.05); /* Slight zoom effect */
+  }
+  
+  .input-group .input-group-append .btn {
+    margin-left: -2px; /* Avoid gap between the input and button */
+  }
+  
+  /* ///////////////////// */
+  .list-group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: transparent !important; /* Remove white background */
+    border-radius: 10px;
+    margin-bottom: 15px;
+    padding: 15px;
+    border: none !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6); /* Add darker shadows */
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .fade-in {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  
+  .fade-out {
+    transform: translateY(20px); /* Move down when checked */
+    opacity: 0.5; /* Faded look for checked rules */
+    transition: transform 0.5s ease, opacity 0.5s ease;
+  }
+  
+  .list-group-item:hover {
+    background-color: #1f2329 ; /* Darker hover background */
+    transform: translateY(-5px); /* Slight hover lift effect */
+  }
+  
+  .custom-checkbox {
+    width: 25px;
+    height: 25px;
+    margin-right: 15px;
+    border-radius: 6px; /* Give checkboxes a more modern look */
+    border: 2px solid #44AA91;
+    background-color: #1c1f25;
+  }
+  
+  .custom-checkbox:checked {
+    background-color: #44AA91; /* Green color for checked */
+  }
+  
+  .checkbox-label {
+    flex-grow: 1;
+    margin-left: 10px;
+    font-size: 1.2rem;
+    color: #e0e0e0; /* White text for rules */
+    transition: text-decoration 0.2s ease;
+  }
+  
+  .checkbox-label.checked {
+    text-decoration: line-through; /* Strikethrough effect */
+    color: #888;
+  }
+  
+  .text-center .btn {
+    margin: 10px;
+  }
+  
+  .spinner-border-sm {
+    margin-right: 8px; /* Add space between spinner and text */
+  }
+  
+  @media (max-width: 768px) {
+    .container {
+      max-width: 95%;
+      padding: 20px;
+    }
+  
+    h1 {
+      font-size: 1.8rem;
+    }
+  }
+  
