@@ -125,6 +125,8 @@ function App() {
     <div className="container">
       <h1>My Trading Rules Checklist</h1>
 
+      
+
       {/* Add new rule form */}
       <form onSubmit={addRule} className="mb-3">
         <div className="input-group">
@@ -156,6 +158,9 @@ function App() {
         </div>
       </form>
 
+
+      
+
       {/* Loading state while fetching rules */}
       {isFetching ? (
         <div className="text-center">
@@ -163,62 +168,13 @@ function App() {
           <p style={{ color: "white" }}>Fetching Rules...</p>
         </div>
       ) : (
-        // List of rules
         <>
-          <ul className="list-group mb-3">
-            {pinnedRules.map((rule) => (
-              <li
-                key={rule.id}
-                className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"}`}
-              >
-                {/* Pin button */}
-                <button
-                  className="pinned-btn"
-                  onClick={() => togglePin(rule.id, rule.pinned)}
-                >
-                  <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
-                </button>
-
-
-                {/* Checkbox */}
-                <input
-                  type="checkbox"
-                  className="custom-checkbox"
-                  checked={rule.checked}
-                  onChange={() => toggleRule(rule.id, rule.checked)}
-                />
-
-                <label
-                  className={`checkbox-label ${rule.checked ? "checked" : ""}`}
-                  htmlFor={`rule-${rule.id}`}
-                >
-                  {rule.text}
-                </label>
-
-                {/* Delete button */}
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => deleteRule(rule.id)}
-                  disabled={deletingRuleId === rule.id} // Disable button while deleting
-                >
-                  {deletingRuleId === rule.id ? (
-                    <span
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                  ) : (
-                    <i className="fa fa-trash"></i>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          {pinnedRules.length > 0 && <div className="pinned-separator" />} {/* Separator between pinned and unpinned */}
+          {/* List of pinned rules */}
+          {/* Display total number of rules */}
+          <h5 className="rule-counter">Total Rules: {rules.length}</h5>
 
           <ul className="list-group mb-3">
-            {unpinnedRules.map((rule) => (
+            {pinnedRules.map((rule, index) => (
               <li
                 key={rule.id}
                 className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"}`}
@@ -240,6 +196,68 @@ function App() {
                   checked={rule.checked}
                   onChange={() => toggleRule(rule.id, rule.checked)}
                 />
+
+{/* Rule Number */}
+<span className="counter">{index + 1}. </span>
+
+                <label
+                  className={`checkbox-label ${rule.checked ? "checked" : ""}`}
+                  htmlFor={`rule-${rule.id}`}
+                >
+                  {rule.text}
+                </label>
+
+                {/* Delete button */}
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => deleteRule(rule.id)}
+                  disabled={deletingRuleId === rule.id} // Disable button while deleting
+                >
+                  {deletingRuleId === rule.id ? (
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                  ) : (
+                    <i className="fas fa-trash"></i>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Separator between pinned and unpinned */}
+          {pinnedRules.length > 0 && <div className="pinned-separator" />}
+
+          {/* List of unpinned rules */}
+          <ul className="list-group mb-3">
+            {unpinnedRules.map((rule, index) => (
+              <li
+                key={rule.id}
+                className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"}`}
+              >
+                
+
+                {/* Pin button */}
+                <button
+                  className="pinned-btn"
+                  onClick={() => togglePin(rule.id, rule.pinned)}
+                >
+                  <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
+                </button>
+
+                {/* Checkbox */}
+                <input
+                  type="checkbox"
+                  className="custom-checkbox"
+                  checked={rule.checked}
+                  onChange={() => toggleRule(rule.id, rule.checked)}
+                />
+
+{/* Rule Number */}
+<span className="counter">{pinnedRules.length + index + 1}. </span>
+
 
                 <label
                   className={`checkbox-label ${rule.checked ? "checked" : ""}`}

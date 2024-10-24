@@ -36,6 +36,17 @@ body {
     font-size: 2.5rem;
     font-weight: bold;
   }
+
+  .rule-counter {
+    margin-bottom: 25px !important;
+    color: #E2F1E7 !important; /* Crypto green color */
+    text-align: left;
+    /* font-size: 1rem; */
+  }
+
+  .counter{
+    color: #E2F1E7 !important;
+  }
   
   input.form-control {
     border-radius: 30px;
