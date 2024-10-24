@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "./firebase"; // Firebase configuration
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 function App() {
   const [newRule, setNewRule] = useState("");
@@ -118,8 +119,37 @@ function App() {
     return a.checked - b.checked; // Unchecked before checked
   });
 
+
+
+  const handleDragEnd = async (result) => {
+    const { destination, source, draggableId } = result;
+
+    // If no destination, exit
+    if (!destination) return;
+
+    
+
+    // Find the rule that was dragged
+    const draggedRule = rules.find((rule) => rule.id === draggableId);
+
+    // Determine if rule was dragged from pinned to unpinned or vice versa
+    if (destination.droppableId === "pinned" && !draggedRule.pinned) {
+      await togglePin(draggedRule.id, true);
+    } else if (destination.droppableId === "unpinned" && draggedRule.pinned) {
+      await togglePin(draggedRule.id, false);
+    }
+
+    // Rearrange items in the state
+    const updatedRules = [...rules];
+    const [removed] = updatedRules.splice(source.index, 1);
+    updatedRules.splice(destination.index, 0, removed);
+
+    setRules(updatedRules);
+  };
+
   const pinnedRules = sortedRules.filter(rule => rule.pinned);
   const unpinnedRules = sortedRules.filter(rule => !rule.pinned);
+
 
   return (
     <div className="container">
@@ -158,9 +188,6 @@ function App() {
         </div>
       </form>
 
-
-      
-
       {/* Loading state while fetching rules */}
       {isFetching ? (
         <div className="text-center">
@@ -168,124 +195,170 @@ function App() {
           <p style={{ color: "white" }}>Fetching Rules...</p>
         </div>
       ) : (
+
+
         <>
           {/* List of pinned rules */}
           {/* Display total number of rules */}
           <h5 className="rule-counter">Total Rules: {rules.length}</h5>
 
-          <ul className="list-group mb-3">
-            {pinnedRules.map((rule, index) => (
-              <li
-                key={rule.id}
-                className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"}`}
-              >
-                
-
-                {/* Pin button */}
-                <button
-                  className="pinned-btn"
-                  onClick={() => togglePin(rule.id, rule.pinned)}
+          {/* DragDropContext for handling drag events */}
+          <DragDropContext onDragEnd={handleDragEnd}>
+            {/* Pinned Rules Droppable */}
+            <Droppable droppableId="pinned">
+              {(provided) => (
+                <ul 
+                  className="list-group mb-3"
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
                 >
-                  <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
-                </button>
+                  {pinnedRules.map((rule, index) => (
+                    <Draggable key={rule.id} draggableId={rule.id} index={index}>
+                      {(provided) => (
+                        <li
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          key={rule.id}
+                          className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"}`}
+                        >
+                          
 
-                {/* Checkbox */}
-                <input
-                  type="checkbox"
-                  className="custom-checkbox"
-                  checked={rule.checked}
-                  onChange={() => toggleRule(rule.id, rule.checked)}
-                />
+                          {/* Pin button */}
+                          <button
+                            className="pinned-btn"
+                            onClick={() => togglePin(rule.id, rule.pinned)}
+                          >
+                            <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
+                          </button>
 
-{/* Rule Number */}
-<span className="counter">{index + 1}. </span>
+                          {/* Checkbox */}
+                          <input
+                            type="checkbox"
+                            className="custom-checkbox"
+                            checked={rule.checked}
+                            onChange={() => toggleRule(rule.id, rule.checked)}
+                          />
 
-                <label
-                  className={`checkbox-label ${rule.checked ? "checked" : ""}`}
-                  htmlFor={`rule-${rule.id}`}
+                          {/* Rule Number */}
+                          <span className="counter">{index + 1}. </span>
+
+                          <label
+                            className={`checkbox-label ${rule.checked ? "checked" : ""}`}
+                            htmlFor={`rule-${rule.id}`}
+                          >
+                            {rule.text}
+                          </label>
+
+                          {/* Delete button */}
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => deleteRule(rule.id)}
+                            disabled={deletingRuleId === rule.id} // Disable button while deleting
+                          >
+                            {deletingRuleId === rule.id ? (
+                              <span
+                                className="spinner-border spinner-border-sm"
+                                role="status"
+                                aria-hidden="true"
+                              ></span>
+                            ) : (
+                              <i className="fas fa-trash"></i>
+                            )}
+                          </button>
+                        </li>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </ul>
+              )}  
+            </Droppable>
+
+            {/* Separator between pinned and unpinned */}
+            {pinnedRules.length > 0 && <div className="pinned-separator" />}
+          
+            {/* Unpinned Rules Droppable */}
+            <Droppable droppableId="unpinned">
+              {(provided) => (
+                <ul 
+                  className="list-group mb-3"
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
                 >
-                  {rule.text}
-                </label>
+                  {unpinnedRules.map((rule, index) => (
+                    <Draggable key={rule.id} draggableId={rule.id} index={index}>
+                      {(provided) => (
+                        <li
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                          key={rule.id}
+                          className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"}`}
+                        >
+                          
+                          {/* Pin button */}
+                          <button
+                            className="pinned-btn"
+                            onClick={() => togglePin(rule.id, rule.pinned)}
+                          >
+                            <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
+                          </button>
 
-                {/* Delete button */}
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => deleteRule(rule.id)}
-                  disabled={deletingRuleId === rule.id} // Disable button while deleting
-                >
-                  {deletingRuleId === rule.id ? (
-                    <span
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                  ) : (
-                    <i className="fas fa-trash"></i>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
+                          {/* Checkbox */}
+                          <input
+                            type="checkbox"
+                            className="custom-checkbox"
+                            checked={rule.checked}
+                            onChange={() => toggleRule(rule.id, rule.checked)}
+                          />
 
-          {/* Separator between pinned and unpinned */}
-          {pinnedRules.length > 0 && <div className="pinned-separator" />}
-
-          {/* List of unpinned rules */}
-          <ul className="list-group mb-3">
-            {unpinnedRules.map((rule, index) => (
-              <li
-                key={rule.id}
-                className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"}`}
-              >
-                
-
-                {/* Pin button */}
-                <button
-                  className="pinned-btn"
-                  onClick={() => togglePin(rule.id, rule.pinned)}
-                >
-                  <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
-                </button>
-
-                {/* Checkbox */}
-                <input
-                  type="checkbox"
-                  className="custom-checkbox"
-                  checked={rule.checked}
-                  onChange={() => toggleRule(rule.id, rule.checked)}
-                />
-
-{/* Rule Number */}
-<span className="counter">{pinnedRules.length + index + 1}. </span>
+                          {/* Rule Number */}
+                          <span className="counter">{pinnedRules.length + index + 1}. </span>
 
 
-                <label
-                  className={`checkbox-label ${rule.checked ? "checked" : ""}`}
-                  htmlFor={`rule-${rule.id}`}
-                >
-                  {rule.text}
-                </label>
+                          <label
+                            className={`checkbox-label ${rule.checked ? "checked" : ""}`}
+                            htmlFor={`rule-${rule.id}`}
+                          >
+                            {rule.text}
+                          </label>
 
-                {/* Delete button */}
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => deleteRule(rule.id)}
-                  disabled={deletingRuleId === rule.id} // Disable button while deleting
-                >
-                  {deletingRuleId === rule.id ? (
-                    <span
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                  ) : (
-                    <i className="fas fa-trash"></i>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
+                          {/* Delete button */}
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => deleteRule(rule.id)}
+                            disabled={deletingRuleId === rule.id} // Disable button while deleting
+                          >
+                            {deletingRuleId === rule.id ? (
+                              <span
+                                className="spinner-border spinner-border-sm"
+                                role="status"
+                                aria-hidden="true"
+                              ></span>
+                            ) : (
+                              <i className="fas fa-trash"></i>
+                            )}
+                          </button>
+                        </li>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </ul>
+              )}
+            </Droppable>
+          </DragDropContext>
         </>
+
+
+
+
+
+
+
+
+
       )}
 
       {/* Reset, Unpin all, and Delete all buttons */}
