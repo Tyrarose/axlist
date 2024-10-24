@@ -127,22 +127,38 @@ function App() {
     // If no destination, exit
     if (!destination) return;
 
-    
-
-    // Find the rule that was dragged
-    const draggedRule = rules.find((rule) => rule.id === draggableId);
-
-    // Determine if rule was dragged from pinned to unpinned or vice versa
-    if (destination.droppableId === "pinned" && !draggedRule.pinned) {
-      await togglePin(draggedRule.id, true);
-    } else if (destination.droppableId === "unpinned" && draggedRule.pinned) {
-      await togglePin(draggedRule.id, false);
+    // If dropped in the same position, no need to reorder
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+      return;
     }
 
-    // Rearrange items in the state
-    const updatedRules = [...rules];
-    const [removed] = updatedRules.splice(source.index, 1);
-    updatedRules.splice(destination.index, 0, removed);
+    const sourceRules = source.droppableId === "pinned" ? pinnedRules : unpinnedRules;
+    const destRules = destination.droppableId === "pinned" ? pinnedRules : unpinnedRules;
+
+
+    // Get the dragged rule
+    const draggedRule = sourceRules[source.index];
+
+
+    // Remove the dragged rule from the source array
+    const updatedSourceRules = Array.from(sourceRules);
+    updatedSourceRules.splice(source.index, 1);
+
+    // Add the dragged rule to the destination array at the right position
+    const updatedDestRules = Array.from(destRules);
+    updatedDestRules.splice(destination.index, 0, draggedRule);
+
+
+    // If moved between pinned and unpinned, update the pinned status
+    if (source.droppableId !== destination.droppableId) {
+      draggedRule.pinned = destination.droppableId === "pinned";
+      updateDoc(doc(db, "rules", draggedRule.id), { pinned: draggedRule.pinned });
+    }
+
+    // Update the rules array
+    const updatedRules = source.droppableId === destination.droppableId
+      ? updatedSourceRules.concat(destRules) // Moving within the same droppable
+      : updatedSourceRules.concat(updatedDestRules); // Moving between different droppables
 
     setRules(updatedRules);
   };
