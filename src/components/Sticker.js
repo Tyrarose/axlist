@@ -1,117 +1,178 @@
-import React, { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, updateDoc, doc, onSnapshot } from "firebase/firestore";
+import React, { useState, useEffect, useRef } from "react";
+import { collection, addDoc, updateDoc, doc, deleteDoc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../firebase";
-
-// Sticky Note Component for individual notes
-const StickyNote = ({ id, position, text, updateStickerText }) => {
-  const [noteText, setNoteText] = useState(text);
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      updateStickerText(id, noteText); // Save to Firestore
-    }
-  };
-
-  return (
-    <div
-      className="sticky-note"
-      style={{
-        position: 'absolute',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        backgroundColor: '#629584',
-        padding: '10px',
-        width: '150px',
-        height: '150px',
-        boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-      }}
-    >
-      <textarea
-        value={noteText}
-        onChange={(e) => setNoteText(e.target.value)}
-        onKeyPress={handleKeyPress}
-        onBlur={() => updateStickerText(id, noteText)} // Save on blur (focus loss)
-        style={{
-          width: '100%',
-          height: '100%',
-          border: 'none',
-          background: 'transparent',
-          outline: 'none',
-        }}
-      />
-    </div>
-  );
-};
 
 const Stickers = ({ user }) => {
   const [postItList, setPostItList] = useState([]);
+  const [localText, setLocalText] = useState({}); // Local state for managing textarea input
+  const draggingRef = useRef(null);
+  const newStickerRef = useRef(null); // Ref for focusing new sticker's textarea
 
-  // Fetch stickers from Firestore when the component is mounted
+  // Fetch existing stickers from Firestore
   useEffect(() => {
     if (!user) return;
-  
+
     const unsubscribe = onSnapshot(collection(db, `users/${user.uid}/stickers`), (snapshot) => {
       const fetchedStickers = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
       setPostItList(fetchedStickers);
+
+      // Initialize local text state for each sticker
+      const initialText = snapshot.docs.reduce((acc, doc) => {
+        acc[doc.id] = doc.data().text || '';
+        return acc;
+      }, {});
+      setLocalText(initialText);
     });
-  
-    // Cleanup listener on component unmount
+
     return () => unsubscribe();
   }, [user]);
-  
 
-  // Handle double-click event to create a sticky note
+  // Handle double-click to add a new sticker
   useEffect(() => {
     const handleDoubleClick = async (e) => {
       if (e.target.classList.contains('sticky-note')) return;
-    
+
       const newSticker = {
         position: { x: e.clientX, y: e.clientY },
         text: '',
         fill: '#FEE440',
       };
-    
-      // Optimistically update UI
-      const tempId = Date.now().toString(); // Generate a temporary ID
+
+      const tempId = Date.now().toString();
       setPostItList([...postItList, { id: tempId, ...newSticker }]);
-    
+      setLocalText((prev) => ({ ...prev, [tempId]: '' })); // Initialize local text for new sticker
+
       const docRef = await addDoc(collection(db, `users/${auth.currentUser.uid}/stickers`), newSticker);
-      // Update the temporary ID with the actual Firestore ID
       setPostItList((prev) =>
         prev.map((sticker) => (sticker.id === tempId ? { ...sticker, id: docRef.id } : sticker))
       );
+
+      // Focus on the new textarea after the sticker is added
+      setTimeout(() => {
+        if (newStickerRef.current) {
+          newStickerRef.current.focus();
+        }
+      }, 0);
     };
-    
 
     window.addEventListener('dblclick', handleDoubleClick);
     return () => window.removeEventListener('dblclick', handleDoubleClick);
   }, [postItList, user]);
 
-  // Function to update sticker content in Firestore
-  const updateStickerText = async (id, newText) => {
+  // Function to update sticker text in Firestore on blur
+  const saveTextToFirestore = async (id, newText) => {
     const stickerDoc = doc(db, `users/${auth.currentUser.uid}/stickers`, id);
     await updateDoc(stickerDoc, { text: newText });
-    setPostItList(
-      postItList.map((sticker) =>
-        sticker.id === id ? { ...sticker, text: newText } : sticker
-      )
-    );
+  };
+
+  // Handle local typing without delay
+  const handleTextChange = (id, newText) => {
+    setLocalText((prev) => ({ ...prev, [id]: newText }));
+  };
+
+  // Save to Firestore when the user leaves the textarea
+  const handleBlur = (id) => {
+    saveTextToFirestore(id, localText[id]);
+  };
+
+  // Function to delete a sticker
+  const deleteSticker = async (id) => {
+    await deleteDoc(doc(db, `users/${auth.currentUser.uid}/stickers`, id));
+    setPostItList((prev) => prev.filter((sticker) => sticker.id !== id));
+    setLocalText((prev) => {
+      const updatedText = { ...prev };
+      delete updatedText[id];
+      return updatedText;
+    });
+  };
+
+  // Function to handle dragging of stickers
+  const handleDragStart = (e, id) => {
+    const sticker = postItList.find((s) => s.id === id);
+    if (!sticker) return;
+  
+    const offsetX = e.clientX - sticker.position.x;
+    const offsetY = e.clientY - sticker.position.y;
+  
+    draggingRef.current = { id, offsetX, offsetY };
+  
+    let animationFrameId = null;
+  
+    const handleMouseMove = (e) => {
+      if (!draggingRef.current) return;
+  
+      // Only update position inside requestAnimationFrame for better performance
+      const updatePosition = () => {
+        const { offsetX, offsetY } = draggingRef.current;
+        const newPosition = {
+          x: e.clientX - offsetX,
+          y: e.clientY - offsetY,
+        };
+  
+        setPostItList((prev) =>
+          prev.map((sticker) =>
+            sticker.id === id ? { ...sticker, position: newPosition } : sticker
+          )
+        );
+        animationFrameId = null; // Reset animation frame id
+      };
+  
+      if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(updatePosition);
+      }
+    };
+  
+    const handleMouseUp = () => {
+      if (!draggingRef.current) return;
+      const { id } = draggingRef.current;
+      const updatedSticker = postItList.find((s) => s.id === id);
+      if (updatedSticker) {
+        updateStickerPosition(id, updatedSticker.position);
+      }
+  
+      draggingRef.current = null;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Function to update sticker position in Firestore
+  const updateStickerPosition = async (id, newPosition) => {
+    const stickerDoc = doc(db, `users/${auth.currentUser.uid}/stickers`, id);
+    await updateDoc(stickerDoc, { position: newPosition });
   };
 
   return (
     <>
       {postItList.map(({ id, position, text }) => (
-        <StickyNote
+        <div
           key={id}
-          id={id}
-          position={position}
-          text={text}
-          updateStickerText={updateStickerText}
-        />
+          className="sticky-note"
+          style={{
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            position: 'absolute',
+          }}
+          onMouseDown={(e) => handleDragStart(e, id)} // Start dragging when mouse is down
+        >
+          <button className="delete-button" onClick={() => deleteSticker(id)}>
+            ×
+          </button>
+          
+          <textarea
+            ref={id === postItList[postItList.length - 1]?.id ? newStickerRef : null} // Focus new sticker's textarea
+            className="note-textarea"
+            value={localText[id] !== undefined ? localText[id] : text} // Use local text for faster updates
+            onChange={(e) => handleTextChange(id, e.target.value)} // Update local state on each keystroke
+            onBlur={() => handleBlur(id)} // Save to Firestore on blur
+          />
+        </div>
       ))}
     </>
   );

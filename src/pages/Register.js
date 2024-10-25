@@ -87,7 +87,7 @@ function Register({ setUser }) {
         <div className="pinned-separator" />
 
         <div className="text-center">
-          <button className="btn btn-add w-100" onClick={() => navigate("/login")}>
+          <button className="btn btn-secondary w-100" onClick={() => navigate("/login")}>
             Back to Login
           </button>
         </div>

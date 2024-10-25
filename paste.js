@@ -22,9 +22,8 @@ function AppContent({ user, handleLogout }) {
       const fetchData = async () => {
         if (!user) return;
   
-        setIsFetching(true);
-  
         // Fetch rules
+        setIsFetching(true);
         const rulesSnapshot = await getDocs(collection(db, "rules"));
         const fetchedRules = rulesSnapshot.docs.map((doc) => ({
           id: doc.id,
