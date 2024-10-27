@@ -7,6 +7,7 @@ const Stickers = ({ user }) => {
   const [localText, setLocalText] = useState({});
   const [savingState, setSavingState] = useState({}); // Track save states for visual feedback
   const draggingPositionRef = useRef(null); // Store position during drag
+  const newStickerRef = useRef(null); // Ref for focusing new sticker's textarea
 
   // Fetch existing stickers from Firestore
   useEffect(() => {
@@ -28,6 +29,37 @@ const Stickers = ({ user }) => {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Double-click to add a new sticker
+  useEffect(() => {
+    const handleDoubleClick = async (e) => {
+      if (e.target.classList.contains("sticky-note")) return;
+
+      const newSticker = {
+        position: { x: e.clientX, y: e.clientY },
+        text: '',
+        fill: '#FEE440',
+      };
+
+      const tempId = Date.now().toString();
+      setPostItList([...postItList, { id: tempId, ...newSticker }]);
+      setLocalText((prev) => ({ ...prev, [tempId]: '' }));
+
+      const docRef = await addDoc(collection(db, `users/${auth.currentUser.uid}/stickers`), newSticker);
+      setPostItList((prev) =>
+        prev.map((sticker) => (sticker.id === tempId ? { ...sticker, id: docRef.id } : sticker))
+      );
+
+      setTimeout(() => {
+        if (newStickerRef.current) {
+          newStickerRef.current.focus();
+        }
+      }, 0);
+    };
+
+    window.addEventListener("dblclick", handleDoubleClick);
+    return () => window.removeEventListener("dblclick", handleDoubleClick);
+  }, [postItList, user]);
 
   // Function to save sticker position to Firebase with visual feedback
   const updateStickerPosition = async (id, newPosition) => {
@@ -127,6 +159,7 @@ const Stickers = ({ user }) => {
             ×
           </button>
           <textarea
+            ref={id === postItList[postItList.length - 1]?.id ? newStickerRef : null}
             className="note-textarea"
             value={localText[id] !== undefined ? localText[id] : text}
             onChange={(e) => handleTextChange(id, e.target.value)}
