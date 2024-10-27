@@ -222,7 +222,7 @@ const RulesManager = ({ user }) => {
                 )}
 
                 <button
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-secondary btn-sm"
                   onClick={() => deleteRule(rule.id)}
                   disabled={deletingRuleId === rule.id}
                 >
@@ -264,7 +264,7 @@ const RulesManager = ({ user }) => {
                 )}
 
                 {editingRuleId === rule.id ? (
-                  <button className="btn btn-success btn-sm" onClick={() => saveEdit(rule.id)} disabled={isSavingEdit}>
+                  <button className="btn btn-success btn-sm btn-save" onClick={() => saveEdit(rule.id)} disabled={isSavingEdit}>
                     {isSavingEdit ? (
                       <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                     ) : (
@@ -272,13 +272,13 @@ const RulesManager = ({ user }) => {
                     )}
                   </button>
                 ) : (
-                  <button className="btn btn-secondary btn-sm" onClick={() => startEditing(rule.id, rule.text)}>
+                  <button className="btn btn-secondary btn-sm btn-edit" onClick={() => startEditing(rule.id, rule.text)}>
                     <i className="fas fa-edit"></i>
                   </button>
                 )}
 
                 <button
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-secondary btn-sm"
                   onClick={() => deleteRule(rule.id)}
                   disabled={deletingRuleId === rule.id}
                 >
