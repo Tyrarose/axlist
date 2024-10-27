@@ -172,7 +172,7 @@ const RulesManager = ({ user }) => {
       {isFetching ? (
         <div className="text-center">
           <span className="spinner-border text-light" role="status" aria-hidden="true"></span>
-          <p>Fetching Rules...</p>
+          <p className='fetching-text'>Fetching Rules...</p>
         </div>
       ) : (
         <>
