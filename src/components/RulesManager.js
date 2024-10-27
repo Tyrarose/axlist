@@ -98,16 +98,10 @@ const RulesManager = ({ user }) => {
     const ruleDoc = doc(db, `users/${auth.currentUser.uid}/rules`, id);
     await updateDoc(ruleDoc, { checked: !checked });
     
-    setRules((prevRules) => {
-      const updatedRules = prevRules.map((rule) => 
-        rule.id === id ? { ...rule, checked: !checked } : rule
-      );
-  
-      // Sort: Unchecked items first, then checked
-      return updatedRules.sort((a, b) => a.checked - b.checked);
-    });
+    setRules((prevRules) => prevRules.map((rule) => 
+      rule.id === id ? { ...rule, checked: !checked } : rule
+    ));
   };
-  
 
   const togglePin = async (id, pinned) => {
     const ruleDoc = doc(db, `users/${auth.currentUser.uid}/rules`, id);
@@ -126,11 +120,17 @@ const RulesManager = ({ user }) => {
   const handleDragEnd = async (result) => {
     const { destination, source } = result;
     if (!destination) return;
-    if (source.index === destination.index && source.droppableId === destination.droppableId) return;
+    
+    // Prevent drag-and-drop between pinned and unpinned lists
+    if (
+      (source.droppableId === "pinned" && destination.droppableId === "unpinned") ||
+      (source.droppableId === "unpinned" && destination.droppableId === "pinned")
+    ) {
+      return;
+    }
 
     const reorderedRules = Array.from(rules);
     const [movedRule] = reorderedRules.splice(source.index, 1);
-    movedRule.pinned = destination.droppableId === "pinned";
     reorderedRules.splice(destination.index, 0, movedRule);
 
     setRules(reorderedRules);
@@ -138,20 +138,14 @@ const RulesManager = ({ user }) => {
     const updatePromises = reorderedRules.map((rule, index) => {
       return updateDoc(doc(db, `users/${user.uid}/rules`, rule.id), {
         order: index,
-        pinned: rule.pinned,
       });
     });
 
     await Promise.all(updatePromises);
   };
 
-  const pinnedRules = rules
-    .filter((rule) => rule.pinned)
-    .sort((a, b) => a.checked - b.checked);
-
-  const unpinnedRules = rules
-    .filter((rule) => !rule.pinned)
-    .sort((a, b) => a.checked - b.checked);
+  const pinnedRules = rules.filter((rule) => rule.pinned);
+  const unpinnedRules = rules.filter((rule) => !rule.pinned);
 
   return (
     <div>
@@ -188,41 +182,33 @@ const RulesManager = ({ user }) => {
                 <ul className="list-group mb-3" {...provided.droppableProps} ref={provided.innerRef}>
                   {pinnedRules.map((rule, index) => (
                     <Draggable key={rule.id} draggableId={rule.id} index={index}>
-                    {(provided, snapshot) => (
-                      <li
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"} ${snapshot.isDragging ? "dragging" : ""}`}
-                      >
-                        {/* Pin button */}
-                        <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
-                          <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
-                        </button>
-                  
-                        {/* Checkbox */}
-                        <input
-                          type="checkbox"
-                          className="custom-checkbox"
-                          checked={rule.checked}
-                          onChange={() => toggleChecked(rule.id, rule.checked)}
-                        />
-                  
-                        {/* Rule text */}
-                        <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
-                  
-                        {/* Delete button */}
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => deleteRule(rule.id)}
-                          disabled={deletingRuleId === rule.id}
+                      {(provided, snapshot) => (
+                        <li
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`list-group-item d-flex justify-content-between align-items-center ${snapshot.isDragging ? "dragging" : ""}`}
                         >
-                          {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
-                        </button>
-                      </li>
-                    )}
-                  </Draggable>
-                  
+                          <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
+                            <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
+                          </button>
+                          <input
+                            type="checkbox"
+                            className="custom-checkbox"
+                            checked={rule.checked}
+                            onChange={() => toggleChecked(rule.id, rule.checked)}
+                          />
+                          <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => deleteRule(rule.id)}
+                            disabled={deletingRuleId === rule.id}
+                          >
+                            {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
+                          </button>
+                        </li>
+                      )}
+                    </Draggable>
                   ))}
                   {provided.placeholder}
                 </ul>
@@ -230,47 +216,39 @@ const RulesManager = ({ user }) => {
             </Droppable>
 
             {pinnedRules.length > 0 && <div className="pinned-separator" />}
-            
+
             <Droppable droppableId="unpinned">
               {(provided) => (
                 <ul className="list-group mb-3" {...provided.droppableProps} ref={provided.innerRef}>
                   {unpinnedRules.map((rule, index) => (
                     <Draggable key={rule.id} draggableId={rule.id} index={index}>
-                    {(provided, snapshot) => (
-                      <li
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        className={`list-group-item d-flex justify-content-between align-items-center ${rule.checked ? "fade-out" : "fade-in"} ${snapshot.isDragging ? "dragging" : ""}`}
-                      >
-                        {/* Pin button */}
-                        <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
-                          <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
-                        </button>
-                  
-                        {/* Checkbox */}
-                        <input
-                          type="checkbox"
-                          className="custom-checkbox"
-                          checked={rule.checked}
-                          onChange={() => toggleChecked(rule.id, rule.checked)}
-                        />
-                  
-                        {/* Rule text */}
-                        <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
-                  
-                        {/* Delete button */}
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => deleteRule(rule.id)}
-                          disabled={deletingRuleId === rule.id}
+                      {(provided, snapshot) => (
+                        <li
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          className={`list-group-item d-flex justify-content-between align-items-center ${snapshot.isDragging ? "dragging" : ""}`}
                         >
-                          {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
-                        </button>
-                      </li>
-                    )}
-                  </Draggable>
-                  
+                          <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
+                            <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
+                          </button>
+                          <input
+                            type="checkbox"
+                            className="custom-checkbox"
+                            checked={rule.checked}
+                            onChange={() => toggleChecked(rule.id, rule.checked)}
+                          />
+                          <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => deleteRule(rule.id)}
+                            disabled={deletingRuleId === rule.id}
+                          >
+                            {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
+                          </button>
+                        </li>
+                      )}
+                    </Draggable>
                   ))}
                   {provided.placeholder}
                 </ul>
@@ -279,66 +257,38 @@ const RulesManager = ({ user }) => {
           </DragDropContext>
 
           {/* Reset, Unpin all, and Delete all buttons */}
-      <div className="text-center mb-3">
-      
-      {/* Reset, Unpin all, and Delete all buttons */}
-      <div className="text-center mb-3">
-        <button
-          onClick={resetRules}
-          className="btn btn-danger"
-          disabled={isResetting}
-        >
-          {isResetting ? (
-            <>
-              <span
-                className="spinner-border spinner-border-sm"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Unchecking All...
-            </>
-          ) : (
-            "Uncheck All"
-          )}
-        </button>
-        <button
-          onClick={unpinAllRules}
-          className="btn btn-danger ml-3"
-          disabled={isUnpinningAll}
-        >
-          {isUnpinningAll ? (
-            <>
-              <span
-                className="spinner-border spinner-border-sm"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Clearing Pins...
-            </>
-          ) : (
-            "Clear Pins"
-          )}
-        </button>
-        <button
-          onClick={deleteAllRules}
-          className="btn btn-secondary ml-5"
-          disabled={isDeletingAll}
-        >
-          {isDeletingAll ? (
-            <>
-              <span
-                className="spinner-border spinner-border-sm"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Deleting All Rules...
-            </>
-          ) : (
-            "Delete All Rules"
-          )}
-        </button>
-      </div>
-      </div>
+          <div className="text-center mb-3">
+            <button onClick={resetRules} className="btn btn-danger" disabled={isResetting}>
+              {isResetting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  Unchecking All...
+                </>
+              ) : (
+                "Uncheck All"
+              )}
+            </button>
+            <button onClick={unpinAllRules} className="btn btn-danger ml-3" disabled={isUnpinningAll}>
+              {isUnpinningAll ? (
+                <>
+                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  Clearing Pins...
+                </>
+              ) : (
+                "Clear Pins"
+              )}
+            </button>
+            <button onClick={deleteAllRules} className="btn btn-secondary ml-5" disabled={isDeletingAll}>
+              {isDeletingAll ? (
+                <>
+                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  Deleting All Rules...
+                </>
+              ) : (
+                "Delete All Rules"
+              )}
+            </button>
+          </div>
         </>
       )}
     </div>
