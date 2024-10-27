@@ -90,63 +90,64 @@ const Stickers = ({ user }) => {
   };
 
   // Function to handle dragging of stickers
-  const handleDragStart = (e, id) => {
-    const sticker = postItList.find((s) => s.id === id);
-    if (!sticker) return;
-  
-    const offsetX = e.clientX - sticker.position.x;
-    const offsetY = e.clientY - sticker.position.y;
-  
-    draggingRef.current = { id, offsetX, offsetY };
-  
-    let animationFrameId = null;
-  
-    const handleMouseMove = (e) => {
-      if (!draggingRef.current) return;
-  
-      // Only update position inside requestAnimationFrame for better performance
-      const updatePosition = () => {
-        const { offsetX, offsetY } = draggingRef.current;
-        const newPosition = {
-          x: e.clientX - offsetX,
-          y: e.clientY - offsetY,
-        };
-  
-        setPostItList((prev) =>
-          prev.map((sticker) =>
-            sticker.id === id ? { ...sticker, position: newPosition } : sticker
-          )
-        );
-        animationFrameId = null; // Reset animation frame id
+const handleDragStart = (e, id) => {
+  const sticker = postItList.find((s) => s.id === id);
+  if (!sticker) return;
+
+  const offsetX = e.clientX - sticker.position.x;
+  const offsetY = e.clientY - sticker.position.y;
+
+  draggingRef.current = { id, offsetX, offsetY };
+
+  let animationFrameId = null;
+
+  const handleMouseMove = (e) => {
+    if (!draggingRef.current) return;
+
+    const updatePosition = () => {
+      const { offsetX, offsetY } = draggingRef.current;
+      const newPosition = {
+        x: e.clientX - offsetX,
+        y: e.clientY - offsetY,
       };
-  
-      if (!animationFrameId) {
-        animationFrameId = requestAnimationFrame(updatePosition);
-      }
+
+      setPostItList((prev) =>
+        prev.map((sticker) =>
+          sticker.id === id ? { ...sticker, position: newPosition } : sticker
+        )
+      );
+      animationFrameId = null;
     };
-  
-    const handleMouseUp = () => {
-      if (!draggingRef.current) return;
-      const { id } = draggingRef.current;
-      const updatedSticker = postItList.find((s) => s.id === id);
-      if (updatedSticker) {
-        updateStickerPosition(id, updatedSticker.position);
-      }
-  
-      draggingRef.current = null;
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+
+    if (!animationFrameId) {
+      animationFrameId = requestAnimationFrame(updatePosition);
+    }
   };
 
-  // Function to update sticker position in Firestore
-  const updateStickerPosition = async (id, newPosition) => {
-    const stickerDoc = doc(db, `users/${auth.currentUser.uid}/stickers`, id);
-    await updateDoc(stickerDoc, { position: newPosition });
+  const handleMouseUp = async () => {
+    if (!draggingRef.current) return;
+
+    const { id } = draggingRef.current;
+    const updatedSticker = postItList.find((s) => s.id === id);
+    if (updatedSticker) {
+      await updateStickerPosition(id, updatedSticker.position); // Save position to Firestore
+    }
+
+    draggingRef.current = null;
+    window.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('mouseup', handleMouseUp);
   };
+
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('mouseup', handleMouseUp);
+};
+
+// Function to update sticker position in Firestore
+const updateStickerPosition = async (id, newPosition) => {
+  const stickerDoc = doc(db, `users/${auth.currentUser.uid}/stickers`, id);
+  await updateDoc(stickerDoc, { position: newPosition });
+};
+
 
   return (
     <>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const RulesManager = ({ user }) => {
   const [rules, setRules] = useState([]);
@@ -12,6 +11,9 @@ const RulesManager = ({ user }) => {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isUnpinningAll, setIsUnpinningAll] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState(null);
+  const [editedText, setEditedText] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   useEffect(() => {
     const fetchRules = async () => {
@@ -117,31 +119,30 @@ const RulesManager = ({ user }) => {
     });
   };
 
-  const handleDragEnd = async (result) => {
-    const { destination, source } = result;
-    if (!destination) return;
-    
-    // Prevent drag-and-drop between pinned and unpinned lists
-    if (
-      (source.droppableId === "pinned" && destination.droppableId === "unpinned") ||
-      (source.droppableId === "unpinned" && destination.droppableId === "pinned")
-    ) {
-      return;
+  const startEditing = (id, currentText) => {
+    setEditingRuleId(id);
+    setEditedText(currentText);
+  };
+
+  const saveEdit = async (id) => {
+    setIsSavingEdit(true);
+    const ruleDoc = doc(db, `users/${auth.currentUser.uid}/rules`, id);
+    await updateDoc(ruleDoc, { text: editedText });
+
+    setRules((prevRules) =>
+      prevRules.map((rule) =>
+        rule.id === id ? { ...rule, text: editedText } : rule
+      )
+    );
+    setEditingRuleId(null);
+    setEditedText("");
+    setIsSavingEdit(false);
+  };
+
+  const handleEditKeyDown = (e, id) => {
+    if (e.key === 'Enter') {
+      saveEdit(id);
     }
-
-    const reorderedRules = Array.from(rules);
-    const [movedRule] = reorderedRules.splice(source.index, 1);
-    reorderedRules.splice(destination.index, 0, movedRule);
-
-    setRules(reorderedRules);
-
-    const updatePromises = reorderedRules.map((rule, index) => {
-      return updateDoc(doc(db, `users/${user.uid}/rules`, rule.id), {
-        order: index,
-      });
-    });
-
-    await Promise.all(updatePromises);
   };
 
   const pinnedRules = rules.filter((rule) => rule.pinned);
@@ -176,87 +177,117 @@ const RulesManager = ({ user }) => {
       ) : (
         <>
           <h5 className="rule-counter">Total Rules: {rules.length}</h5>
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="pinned">
-              {(provided) => (
-                <ul className="list-group mb-3" {...provided.droppableProps} ref={provided.innerRef}>
-                  {pinnedRules.map((rule, index) => (
-                    <Draggable key={rule.id} draggableId={rule.id} index={index}>
-                      {(provided, snapshot) => (
-                        <li
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`list-group-item d-flex justify-content-between align-items-center ${snapshot.isDragging ? "dragging" : ""}`}
-                        >
-                          <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
-                            <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
-                          </button>
-                          <input
-                            type="checkbox"
-                            className="custom-checkbox"
-                            checked={rule.checked}
-                            onChange={() => toggleChecked(rule.id, rule.checked)}
-                          />
-                          <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => deleteRule(rule.id)}
-                            disabled={deletingRuleId === rule.id}
-                          >
-                            {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
-                          </button>
-                        </li>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </ul>
-              )}
-            </Droppable>
 
-            {pinnedRules.length > 0 && <div className="pinned-separator" />}
+          <ul className="list-group mb-3">
+            {pinnedRules.map((rule) => (
+              <li
+                key={rule.id}
+                className={`list-group-item d-flex justify-content-between align-items-center`}
+              >
+                <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
+                  <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
+                </button>
 
-            <Droppable droppableId="unpinned">
-              {(provided) => (
-                <ul className="list-group mb-3" {...provided.droppableProps} ref={provided.innerRef}>
-                  {unpinnedRules.map((rule, index) => (
-                    <Draggable key={rule.id} draggableId={rule.id} index={index}>
-                      {(provided, snapshot) => (
-                        <li
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`list-group-item d-flex justify-content-between align-items-center ${snapshot.isDragging ? "dragging" : ""}`}
-                        >
-                          <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
-                            <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
-                          </button>
-                          <input
-                            type="checkbox"
-                            className="custom-checkbox"
-                            checked={rule.checked}
-                            onChange={() => toggleChecked(rule.id, rule.checked)}
-                          />
-                          <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => deleteRule(rule.id)}
-                            disabled={deletingRuleId === rule.id}
-                          >
-                            {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
-                          </button>
-                        </li>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </ul>
-              )}
-            </Droppable>
-          </DragDropContext>
+                <input
+                  type="checkbox"
+                  className="custom-checkbox"
+                  checked={rule.checked}
+                  onChange={() => toggleChecked(rule.id, rule.checked)}
+                />
 
-          {/* Reset, Unpin all, and Delete all buttons */}
+                {editingRuleId === rule.id ? (
+                  <input
+                    type="text"
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    className="form-control edit-input"
+                    onKeyDown={(e) => handleEditKeyDown(e, rule.id)}
+                  />
+                ) : (
+                  <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
+                )}
+
+                {editingRuleId === rule.id ? (
+                  <button className="btn btn-success btn-sm btn-save" onClick={() => saveEdit(rule.id)} disabled={isSavingEdit}>
+                    {isSavingEdit ? (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    ) : (
+                      <i className="fas fa-save"></i>
+                    )}
+                  </button>
+                ) : (
+                  <button className="btn btn-secondary btn-sm btn-edit" onClick={() => startEditing(rule.id, rule.text)}>
+                    <i className="fas fa-edit"></i>
+                  </button>
+                )}
+
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => deleteRule(rule.id)}
+                  disabled={deletingRuleId === rule.id}
+                >
+                  {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {pinnedRules.length > 0 && <div className="pinned-separator" />}
+
+          <ul className="list-group mb-3">
+            {unpinnedRules.map((rule) => (
+              <li
+                key={rule.id}
+                className={`list-group-item d-flex justify-content-between align-items-center`}
+              >
+                <button className="pinned-btn" onClick={() => togglePin(rule.id, rule.pinned)}>
+                  <i className={rule.pinned ? "fas fa-thumbtack pin-icon" : "fas fa-thumbtack unpin-icon"}></i>
+                </button>
+
+                <input
+                  type="checkbox"
+                  className="custom-checkbox"
+                  checked={rule.checked}
+                  onChange={() => toggleChecked(rule.id, rule.checked)}
+                />
+
+                {editingRuleId === rule.id ? (
+                  <input
+                    type="text"
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    className="form-control edit-input"
+                    onKeyDown={(e) => handleEditKeyDown(e, rule.id)}
+                  />
+                ) : (
+                  <label className={`checkbox-label ${rule.checked ? "checked" : ""}`}>{rule.text}</label>
+                )}
+
+                {editingRuleId === rule.id ? (
+                  <button className="btn btn-success btn-sm" onClick={() => saveEdit(rule.id)} disabled={isSavingEdit}>
+                    {isSavingEdit ? (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    ) : (
+                      <i className="fas fa-save"></i>
+                    )}
+                  </button>
+                ) : (
+                  <button className="btn btn-secondary btn-sm" onClick={() => startEditing(rule.id, rule.text)}>
+                    <i className="fas fa-edit"></i>
+                  </button>
+                )}
+
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => deleteRule(rule.id)}
+                  disabled={deletingRuleId === rule.id}
+                >
+                  {deletingRuleId === rule.id ? "Deleting..." : <i className="fas fa-trash"></i>}
+                </button>
+              </li>
+            ))}
+          </ul>
+
           <div className="text-center mb-3">
             <button onClick={resetRules} className="btn btn-danger" disabled={isResetting}>
               {isResetting ? (
@@ -282,7 +313,7 @@ const RulesManager = ({ user }) => {
               {isDeletingAll ? (
                 <>
                   <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                  Deleting All Rules...
+                Deleting All Rules...
                 </>
               ) : (
                 "Delete All Rules"

@@ -62,7 +62,7 @@ body {
     color: #aaa; /* Lighter placeholder text */
   }
   
-  .btn-primary, .btn-secondary, .btn-add {
+  .btn-primary, .btn-secondary, .btn-success, .btn-add {
     border-radius: 30px;
     padding: 10px 20px;
     font-size: 1rem;
@@ -89,6 +89,16 @@ body {
   
   .btn-danger:hover {
     background-color: #cc0000;
+  }
+
+  .btn-edit{
+    margin-right: 10px !important;
+    background-color: #629584 !important;
+  }
+
+  .btn-save{
+    margin-right: 10px !important;
+    margin-left: 10px !important;
   }
 
 
